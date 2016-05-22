@@ -89,20 +89,24 @@ class DEAL():
         self._ft = FT(stockcode)
 
     # 检查持仓列表
-    # 没有持仓此股票，则buy
-    # 有持仓此股票，则检查cookie确定sell或buy
     def i_have_hold(self):
-        i_have_lst = []
         hold_lsts = self._ft.check_on_hold()
+        return hold_lsts
 
-        if not hold_lsts:               # 没有持有股票
-            self.fst_time_auto_buy()         # 购买股票
-        else:
-            hold_stock_lst = [hold_lst["StockCode"] for hold_lst in hold_lsts]  # 已经持有的股票代码，列表
+    def trade(self):
+        i_have = self.i_have_hold()
+        if i_have:
+            hold_stock_lst = [hold_lst["StockCode"] for hold_lst in i_have]  # 已经持有的股票代码，列表
             if str(self._stockcode) in hold_stock_lst:
-                pass # check_price_to_deal()
-            else:
-                pass
+                for hold_lst in i_have:
+                    if hold_lst.get("StockCode") == str(self._stockcode) and hold_lst.get("CostPriceValid") == "1":
+                        buy_stock_at_price = float(hold_lst.get("CostPrice"))
+                        buy_stock_at_qty = int(hold_lst.get("Qty"))
+                        self.run(buy_stock_at_price, 0, buy_stock_at_qty)                 # 开始自动交易
+
+        else:                                                                             # 没有持有任何股票,或者此股票不在已持股票行列
+            (mairujia, mairushuliang) = self.fst_time_auto_buy()[1:]                      # 购买股票
+            self.run(mairujia, 0, mairushuliang)                                          # 开始自动交易
 
     # buy_num:购买数量，单位：股，
     # buy_price_one, sell_price_one，摆盘中的数据
@@ -125,24 +129,22 @@ class DEAL():
                 buy_num = int(float(power_str)/(int(self._meishou) * sell_price_one) )
                 if buy_num < 1:
                     print "当前资产净值(%o.3f)太少，不够买一手！退出。" % float(zcjz_str) / 1000
-                    return False
+                    sys.exit()
 
                 if int(sell_price_one) >= int(self._ft.get_cur_price()):
                     if place_order(0, 0, sell_price_one, buy_num, self._stockcode):
-                        print "首次购买，以卖一价格%0.3f买入%d手" % ((float(sell_price_one))/1000, int(buy_num))
+                        print "第1次交易%s，以卖一价格%0.3f买入%d手" % (self._stockcode, (float(sell_price_one))/1000, int(buy_num))
 
                         fst_buy_fail = False
 
-        return True, float(sell_price_one), float(buy_price_one), buy_num
+        return True, float(sell_price_one), buy_num   # 买入成功、买入价、买入数量
 
-    def run(self):
+    def run(self, lst_time_exchange_price, lst_time_exchange_side, lst_time_exchange_num, i=2):
 
-        i = 2  # 交易次数
-        lst_time_exchange_price = self.fst_time_auto_buy()[1]
-        lst_time_exchange_side = 0
-
-        lst_time_exchange_num = self.fst_time_auto_buy()[3]
-
+        #i = 2  # 交易次数
+        #lst_time_exchange_price = self.fst_time_auto_buy()[1]
+        #lst_time_exchange_side = 0
+        #lst_time_exchange_num = self.fst_time_auto_buy()[3]
         print "start to run.."
         if self.fst_time_auto_buy()[0]:
             while True:
@@ -175,7 +177,7 @@ class DEAL():
 
                         # 0 --买入， 1--卖出
                         if place_order(lst_time_exchange_side, 0, sell_price_in_if, lst_time_exchange_num, self._stockcode):
-                            print "第%s次交易，以买一价格%0.3f买入%d手。" % (i, (float(sell_price_in_if))/1000, lst_time_exchange_num)
+                            print "第%s次交易%s，以买一价格%0.3f买入%d手。" % (i, self._stockcode, (float(sell_price_in_if))/1000, lst_time_exchange_num)
                             lst_time_exchange_price = sell_price_in_if
                             i += 1
                     continue
@@ -218,5 +220,5 @@ if __name__ == "__main__":
     # print connection.get_stock_gear(1)
 
     DEAL_obj = DEAL(stock, lowlmt, uplmt, controlline, meishou)
-    DEAL_obj.run()
+    DEAL_obj.trade()
 
