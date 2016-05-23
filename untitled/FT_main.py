@@ -23,29 +23,25 @@ class FT:
         print "连接FTNN结束."
 
     def get_cur_price(self):
-        req_param = {'Market':'1','StockCode':'%s' % str(self._code)}  #Market:港股，StockCode:股票代码
+        # req_param = {'Market':'1','StockCode':'%s' % str(self._code)}  #Market:港股，StockCode:股票代码
+        req_param = {'Market':'2','StockCode':'%s' % str(self._code)}    # 测试用：Market:美股，StockCode:股票代码
         data = send_req_and_get_rsp(self._conn, 1001, req_param, 1)    #获取当前股票基础信息
         real_price = int(data["Cur"])
         return real_price
 
     def get_stock_gear(self, get_gear_num):
-        req_param = {"Market":"1",'StockCode':'%s' % str(self._code),"GetGearNum":str(get_gear_num)}
+        #req_param = {"Market":"1",'StockCode':'%s' % str(self._code),"GetGearNum":str(get_gear_num)}
+        req_param = {"Market":"2",'StockCode':'%s' % str(self._code),"GetGearNum":str(get_gear_num)} # 测试用：Market:美股，StockCode:股票代码
         analyzed_rsps = send_req_and_get_rsp(self._conn,1002,req_param,1)
-        '''
-            {
-            "GearArr":[{"BuyOrder":"1","BuyPrice":"135300","BuyVol":"3400","SellOrder":"2","SellPrice":"135400","SellVol":"27000"},
-                       {"BuyOrder":"5","BuyPrice":"135200","BuyVol":"64000","SellOrder":"5","SellPrice":"135500","SellVol":"70200"},
-                       {"BuyOrder":"20","BuyPrice":"135100","BuyVol":"108300","SellOrder":"9","SellPrice":"135600","SellVol":"142300"}],
-            "Market":"1",
-            "StockCode":"00700"},
-            "Version":"1"
-            }
-        '''
-        dic_gear_info_lst = analyzed_rsps["GearArr"]
-        if dic_gear_info_lst is None:
-            print "获取买卖档口错误"
-            return
-
+        try:
+            dic_gear_info_lst = analyzed_rsps["GearArr"]
+            if dic_gear_info_lst is None:
+                print "获取买卖档口错误."
+                return
+        except TypeError,e:
+            print "股票输入错误：" + '\n',e
+            sys.exit()
+            
         # buy_price_one  = dic_gear_info_lst[0]["BuyPrice"]   # 暂且认为当前市场上出价的第一把交易能满足我的需求
         # sell_price_one = dic_gear_info_lst[0]["SellPrice"]  # 暂且认为当前市场上出价的第一把交易能满足我的需求
         return dic_gear_info_lst
@@ -62,15 +58,16 @@ class FT:
     def get_account_info(self):
         req_param = {"Cookie":"123456","EnvType":"0"}
 
-        # def send_req_and_get_rsp(conn, protocol_code, req_param, protocol_version): #发包
-        account_info_rsp = send_req_and_get_rsp(self._conn, 6007, req_param, 1)
+        # account_info_rsp = send_req_and_get_rsp(self._conn, 6007, req_param, 1)
+        account_info_rsp = send_req_and_get_rsp(self._conn, 7007, req_param, 1)  # 测试用：Market:美股，StockCode:股票代码
         return account_info_rsp["Power"], account_info_rsp["ZCJZ"]
 
     def check_on_hold(self):
-        req_param = {"Cookie":"123456","EnvType":"0"}
-        # {"Protocol":"6009","ReqParam":{"Cookie":"123123","EnvType":"0"},"Version":"1"}
-        on_hold_dict = send_req_and_get_rsp(self._conn, 6009, req_param, 1)
-        on_holded_stock_lst = on_hold_dict["HKPositionArr"]
+        req_param = {"Cookie":"123457","EnvType":"0"}
+        #on_hold_dict = send_req_and_get_rsp(self._conn, 6009, req_param, 1)
+        on_hold_dict = send_req_and_get_rsp(self._conn, 7009, req_param, 1)  # 测试用：Market:美股，StockCode:股票代码
+        #on_holded_stock_lst = on_hold_dict["HKPositionArr"]
+        on_holded_stock_lst = on_hold_dict["USPositionArr"]  # 测试用：Market:美股，StockCode:股票代码
 
         return on_holded_stock_lst
 
@@ -81,32 +78,35 @@ class FT:
 # controlline: 交易触发线
 class DEAL():
     def __init__(self, stockcode, lowline, upline, controlline, meishou):
-        self._stockcode = stockcode
-        self._lowline = lowline
-        self._upline = upline
-        self._controlline = controlline
-        self._meishou = meishou
-        self._ft = FT(stockcode)
+        self.stockcode = stockcode
+        self.lowline = lowline
+        self.upline = upline
+        self.controlline = controlline
+        self.meishou = meishou
+        self.ft = FT(stockcode)
 
     # 检查持仓列表
     def i_have_hold(self):
-        hold_lsts = self._ft.check_on_hold()
+        hold_lsts = self.ft.check_on_hold()
         return hold_lsts
 
     def trade(self):
         i_have = self.i_have_hold()
+        hold_stock_lst = []
         if i_have:
             hold_stock_lst = [hold_lst["StockCode"] for hold_lst in i_have]  # 已经持有的股票代码，列表
-            if str(self._stockcode) in hold_stock_lst:
+            if str(self.stockcode) in hold_stock_lst:
                 for hold_lst in i_have:
-                    if hold_lst.get("StockCode") == str(self._stockcode) and hold_lst.get("CostPriceValid") == "1":
+                    if hold_lst.get("StockCode") == str(self.stockcode) and hold_lst.get("CostPriceValid") == "1":
                         buy_stock_at_price = float(hold_lst.get("CostPrice"))
                         buy_stock_at_qty = int(hold_lst.get("Qty"))
                         self.run(buy_stock_at_price, 0, buy_stock_at_qty)                 # 开始自动交易
 
         else:                                                                             # 没有持有任何股票,或者此股票不在已持股票行列
+            print "我还没有持有该股票：%s，购买并开始交易。.." % self.stockcode
             (mairujia, mairushuliang) = self.fst_time_auto_buy()[1:]                      # 购买股票
             self.run(mairujia, 0, mairushuliang)                                          # 开始自动交易
+
 
     # buy_num:购买数量，单位：股，
     # buy_price_one, sell_price_one，摆盘中的数据
@@ -117,25 +117,29 @@ class DEAL():
         buy_price_one = 0
         buy_num = 0
 
-        power_str, zcjz_str = self._ft.get_account_info()
-        print "pwer %s, zcjz:%s" % (power_str, zcjz_str)
-        gear_info_lst = self._ft.get_stock_gear(3)   #真实环境
+        power_str, zcjz_str = self.ft.get_account_info()
+        #print "pwer %s, zcjz:%s" % (power_str, zcjz_str)
+        gear_info_lst = self.ft.get_stock_gear(1)           #真实环境
 
         while fst_buy_fail:
             for gear_info in gear_info_lst:
                 sell_price_one = gear_info["SellPrice"]
                 buy_price_one  = gear_info["BuyPrice"]
 
-                buy_num = int(float(power_str)/(int(self._meishou) * sell_price_one) )
+                buy_num = int(float(power_str)/(int(self.meishou) * int(sell_price_one)))
                 if buy_num < 1:
-                    print "当前资产净值(%o.3f)太少，不够买一手！退出。" % float(zcjz_str) / 1000
+                    print "当前资产净值(%.3f)太少，不够买一手！退出程序。" % (float(zcjz_str) / 1000)
                     sys.exit()
 
-                if int(sell_price_one) >= int(self._ft.get_cur_price()):
-                    if place_order(0, 0, sell_price_one, buy_num, self._stockcode):
-                        print "第1次交易%s，以卖一价格%0.3f买入%d手" % (self._stockcode, (float(sell_price_one))/1000, int(buy_num))
-
-                        fst_buy_fail = False
+                '''第1次购买时，以现价/卖一价最低值为交易价格，待商榷'''
+                if int(sell_price_one) <= int(self.ft.get_cur_price()):
+                    if place_order(0, 0, sell_price_one, buy_num, self.stockcode):
+                        print "第1次交易%s，以卖一价格%0.3f买入%d手" % (self.stockcode, (float(sell_price_one))/1000, int(buy_num))
+                    else:
+                        print "第1次购买失败，退出程序。"
+                        return
+                    
+                    fst_buy_fail = False
 
         return True, float(sell_price_one), buy_num   # 买入成功、买入价、买入数量
 
@@ -150,51 +154,50 @@ class DEAL():
             while True:
 
                 # 涨幅在2%-8%的时候，并且上一次交易为“买入”，卖出，并记录本次交易价格
-                if self._controlline < (self._ft.get_cur_price() - lst_time_exchange_price)/lst_time_exchange_price<self._lowline \
+                if self.controlline < (self.ft.get_cur_price() - lst_time_exchange_price)/lst_time_exchange_price < self.lowline \
                         and lst_time_exchange_side == 0:
 
-                    gear_info_lst_1 = self._ft.get_stock_gear(3)
+                    gear_info_lst_1 = self.ft.get_stock_gear(1)
                     for gear_info in gear_info_lst_1:
                         buy_price_one_in_if = gear_info["BuyPrice"]
-
                         lst_time_exchange_side = lst_time_exchange_side^1
 
                         # 0 --买入， 1--卖出
-                        if place_order(lst_time_exchange_side, 0, buy_price_one_in_if, lst_time_exchange_num, self._stockcode):
-                            print "第%s次交易，以买一价格%0.3f卖出%d手。" % (i, (float(buy_price_one_in_if))/1000, lst_time_exchange_num)
+                        if place_order(lst_time_exchange_side, 0, buy_price_one_in_if, lst_time_exchange_num, self.stockcode):
+                            print "第%s次交易，以买一价格%.3f卖出%d手。" % (i, ((float(buy_price_one_in_if))/1000), lst_time_exchange_num)
                             lst_time_exchange_price = buy_price_one_in_if
                             i += 1
                     continue
 
                 # 跌幅在2%-8%之间的时候，并且上一次交易为“卖出”，买入，并记录本次交易价格
-                if self._controlline <= (lst_time_exchange_price - self._ft.get_cur_price())/lst_time_exchange_price<self._lowline\
+                if self.controlline <= (lst_time_exchange_price - self.ft.get_cur_price())/lst_time_exchange_price<self.lowline\
                         and lst_time_exchange_side == 1:
-                    gear_info_lst_2 = self._ft.get_stock_gear(3)
+                    gear_info_lst_2 = self.ft.get_stock_gear(1)
                     for gear_info in gear_info_lst_2:
 
                         sell_price_in_if = gear_info["SellPrice"]
                         lst_time_exchange_side = lst_time_exchange_side^1
 
                         # 0 --买入， 1--卖出
-                        if place_order(lst_time_exchange_side, 0, sell_price_in_if, lst_time_exchange_num, self._stockcode):
-                            print "第%s次交易%s，以买一价格%0.3f买入%d手。" % (i, self._stockcode, (float(sell_price_in_if))/1000, lst_time_exchange_num)
+                        if place_order(lst_time_exchange_side, 0, sell_price_in_if, lst_time_exchange_num, self.stockcode):
+                            print "第%s次交易%s，以买一价格%0.3f买入%d手。" % (i, self.stockcode, (float(sell_price_in_if))/1000, lst_time_exchange_num)
                             lst_time_exchange_price = sell_price_in_if
                             i += 1
                     continue
 
                 # 买入后跌幅大于8%，或者买入后涨幅大于15%，全仓释放，不再交易
                 if lst_time_exchange_side == 0 and \
-                        ((lst_time_exchange_price - self._ft.get_cur_price()) / lst_time_exchange_price > 8 or
-                            (self._ft.get_cur_price() - lst_time_exchange_price) / lst_time_exchange_price > 15):
+                        ((lst_time_exchange_price - self.ft.get_cur_price()) / lst_time_exchange_price > 8 or
+                            (self.ft.get_cur_price() - lst_time_exchange_price) / lst_time_exchange_price > 15):
 
-                    gear_info_lst_3 = self._ft.get_stock_gear(3)
+                    gear_info_lst_3 = self.ft.get_stock_gear(1)
                     for gear_info in gear_info_lst_3:
                         buy_price_one_in_8_15 = gear_info["BuyPrice"]
 
                         lst_time_exchange_side = lst_time_exchange_side^1
 
                         # 0 --买入， 1--卖出
-                        if place_order(lst_time_exchange_side, 0, buy_price_one_in_8_15, lst_time_exchange_num, self._stockcode):
+                        if place_order(lst_time_exchange_side, 0, buy_price_one_in_8_15, lst_time_exchange_num, self.stockcode):
                             print "第%s次交易，以买一价格%0.3f卖出%d手,退出程序！" % (i, (float(buy_price_one_in_8_15))/1000, lst_time_exchange_num)
                             sys.exit()
         else:

@@ -41,7 +41,7 @@ def send_req_and_get_rsp(conn, protocol_code, req_param, protocol_version): #发
         if res_dic[0]["RetData"] is not None:
             return res_dic[0]["RetData"]
     else:
-        print "occured error in response!"
+        print "获取服务器响应错误。"
         return
 
 
@@ -55,14 +55,15 @@ def place_order(self, order_side, order_type, price, qty, stock_code):
     req_param = {"EnvType":"1", "Cookie":str(COOKIE), "OrderSide":str(order_side), "OrderType":str(order_type), "Price":str(price), "Qty":str(qty), "StockCode":stock_code}
     COOKIE += 1
 
-    analyzed_rsps_arr = send_req_and_get_rsp(self._conn, 6003, req_param, 1)
-
+    #analyzed_rsps_arr = send_req_and_get_rsp(self._conn, 6003, req_param, 1)
+    analyzed_rsps_arr = send_req_and_get_rsp(self._conn, 7003, req_param, 1)
     order_success = True
     if analyzed_rsps_arr is not None:
         for analyzed_rsps in analyzed_rsps_arr:
             if int(analyzed_rsps["ErrCode"]) != 0:
                 order_success = False
-                print analyzed_rsps["ErrDesc"]
+                print analyzed_rsps["ErrDesc"],"购买或出售错误，退出。"
+                return
 
     if order_success:
         print "交易成功"
