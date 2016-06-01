@@ -1,10 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
-
+import sys
 import json
 import socket
 
-COOKIE = 8888
+COOKIE = 234567
 
 
 def json_analyze_rsps(rsp_str):
@@ -22,6 +22,7 @@ def send_req_and_get_rsp(conn, protocol_code, req_param, protocol_version): #发
     try:
         req = {"Protocol":str(protocol_code), "ReqParam":req_param, "Version":str(protocol_version)}
         req_str = json.dumps(req) + "\r\n"
+        print "req_str:",req_str
         conn.send(req_str)
     except socket.timeout:
     #except Exception as e:
@@ -42,7 +43,7 @@ def send_req_and_get_rsp(conn, protocol_code, req_param, protocol_version): #发
             return res_dic[0]["RetData"]
     else:
         print "获取服务器响应错误。"
-        return
+        sys.exit()
 
 
 # OrderSide: 0---买入, 1---卖出
@@ -50,23 +51,42 @@ def send_req_and_get_rsp(conn, protocol_code, req_param, protocol_version): #发
 # price: 交易价格
 # qty:交易数量
 # stock_code:股票代码
-def place_order(self, order_side, order_type, price, qty, stock_code):
+def place_order(conn, order_side, order_type, price, qty, stock_code):
     global COOKIE
-    req_param = {"EnvType":"1", "Cookie":str(COOKIE), "OrderSide":str(order_side), "OrderType":str(order_type), "Price":str(price), "Qty":str(qty), "StockCode":stock_code}
+    req_param = {"EnvType":"0", "Cookie":str(COOKIE), "OrderSide":str(order_side), "OrderType":str(order_type), "Price":str(price), "Qty":str(qty), "StockCode":stock_code}
     COOKIE += 1
-
-    #analyzed_rsps_arr = send_req_and_get_rsp(self._conn, 6003, req_param, 1)
-    analyzed_rsps_arr = send_req_and_get_rsp(self._conn, 7003, req_param, 1)
     order_success = True
-    if analyzed_rsps_arr is not None:
-        for analyzed_rsps in analyzed_rsps_arr:
-            if int(analyzed_rsps["ErrCode"]) != 0:
-                order_success = False
-                print analyzed_rsps["ErrDesc"],"购买或出售错误，退出。"
-                return
+    
+    import time
+    time.sleep(1.5)         #按照要求，30s内不能交易超过20次。
+    
+    #analyzed_rsps_arr = send_req_and_get_rsp(self._conn, 6003, req_param, 1)
+    analyzed_rsps_arr = send_req_and_get_rsp(conn, 7003, req_param, 1)
+    print "已经下单成功：价格：%s,数量：%s" % (str(price),str(qty))
+    
+#     if analyzed_rsps_arr is not None:
+#         for analyzed_rsps in analyzed_rsps_arr:
+#             if int(analyzed_rsps["ErrCode"]) != 0:
+#                 order_success = False
+#                 print analyzed_rsps["ErrDesc"],"购买或出售错误，退出。"
+#                 return
+    while order_success:                                  #轮询检查当前cookie的交易状态，直到查询到”全部成交“
+        if deal_status_ok(conn,COOKIE):
+            print "交易成功。"
+            return order_success
+        else:
+            continue
 
-    if order_success:
-        print "交易成功"
-
-    return order_success
-
+#{"Protocol":"7008","ReqParam":{"Cookie":"123123","EnvType":"0"},"Version":"1"}
+def deal_status_ok(conn,Cookie):
+    req_param = {"Cookie":str(Cookie),"EnvType":"0"}
+    analyzed_rsps_arr = send_req_and_get_rsp(conn, 7008, req_param, 1)
+    order_array = analyzed_rsps_arr["USOrderArr"]
+    if order_array:
+        '''现在要求每次只交易一支股票，'''
+        print "等待成交中。。。"
+        return 3 == int(order_array[0]["Status"])
+    
+        
+    
+    
