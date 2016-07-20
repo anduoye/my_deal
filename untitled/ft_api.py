@@ -161,7 +161,8 @@ class DEAL(threading.Thread):
 
     def run(self):
         i_have = self.i_have_hold()
-        listbox.insert(END, "************天下武功，唯快不破************")
+        listbox.delete(0, END)
+        listbox.insert(END, "***************************天下武功，唯快不破***************************")
         hold_stock_lst = []
         if i_have:
             hold_stock_lst = [hold_lst["StockCode"] for hold_lst in i_have]  # 已经持有的股票代码，列表
@@ -287,6 +288,13 @@ def runThread():
     th = DEAL()
     th.start()
 
+def calc():
+    try:
+        contrNUM = float(entry7.get())*(1+float(entry6.get())/100)
+        Label8_display.set(contrNUM)
+    except Exception as e:
+        Label8_display.set("计算价格出现错误")
+
 if __name__ == "__main__":
     
     
@@ -300,7 +308,7 @@ if __name__ == "__main__":
 #     DEAL_obj.trade()
     root = Tk()
     root.title('自动化交易助手')
-    root.geometry("800x500+200+100")
+    root.geometry("745x500+200+100")
     root.iconbitmap(r'E:\BBYY\assassin.ico')
     root.minsize(400,300)
 
@@ -350,17 +358,30 @@ if __name__ == "__main__":
     
     #entry6.bind("<KeyRelease-Return>", runThread)    #bind <Enter>
 
-    button = Button(root, text="开始交易", width=10,font=("黑体", 9, "bold"),command=runThread)
+    button = Button(root, text="开始交易", width=10, font=("黑体", 9, "bold"),command=runThread)
     button.grid(row=0, column=15,sticky=E,columnspan=2)
 
     #button.bind('<Button-1>', runThread)    #bind left mouseclick
 
     scrollbar = Scrollbar(root, orient=VERTICAL)
-    listbox = Listbox(root, width=105, height=23,yscrollcommand = scrollbar.set)
-    listbox.grid(row=1, column=0, columnspan=16,sticky=W, padx=10, pady=5)
+    listbox = Listbox(root, width=55, height=23,yscrollcommand = scrollbar.set)
+    listbox.grid(row=1, column=0, columnspan=7, rowspan=15, sticky=W, padx=10, pady=5)
     listbox.insert(END, '')
-    scrollbar.grid(row=1, column=16, sticky=W+N+S, pady=5)
+    scrollbar.grid(row=1, column=7,  rowspan=15, sticky=W+N+S, pady=5)
     scrollbar.config(command=listbox.yview)
-          
+    
+    Label(root,text="交易价格:", font=("黑体", 9, "bold")).grid(row = 1, column = 8)
+    entry7 = Entry(root, width=15)
+    entry7.grid(row=1, column=9, columnspan=3)
+    Label(root,text="预期价格:", font=("黑体", 9, "bold")).grid(row = 2, column = 8)
+    
+    global display
+    Label8_display = StringVar()
+    Label8 = Label(root, width=15, relief = 'sunken', borderwidth = 3, anchor = SE)
+    Label8.grid(row=2, column=9, columnspan=3)
+    Label8['textvariable'] = Label8_display
+    
+    button = Button(root, text="计算价格",height=5, width=10,font=("黑体", 9, "bold"),command=calc)
+    button.grid(row=1, column=15,sticky=W,columnspan=5, rowspan = 2)
     root.mainloop()
 
