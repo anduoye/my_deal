@@ -45,7 +45,8 @@ def send_req_and_get_rsp(lstbox, conn, protocol_code, req_param, protocol_versio
             return res_dic[0]["RetData"]
     else:
         lstbox.insert(END,'交易出现错误，原因是：',res_dic[0]['ErrDesc'])
-        print '交易出现错误，原因是：',res_dic[0]['ErrDesc']
+        return
+        #print '交易出现错误，原因是：',res_dic[0]['ErrDesc']
 
 # OrderSide: 0---买入, 1---卖出
 # order_type: 增强限价单(普通交易)
@@ -54,21 +55,21 @@ def send_req_and_get_rsp(lstbox, conn, protocol_code, req_param, protocol_versio
 # stock_code:股票代码
 def place_order(lstbox, conn, order_side, order_type, price, qty, stock_code):
     global COOKIE
-    req_param = {"EnvType":"1", "Cookie":str(COOKIE), "OrderSide":str(order_side), "OrderType":str(order_type), "Price":str(price), "Qty":str(qty), "StockCode":stock_code}#1,港股仿真交易   
+    req_param = {"EnvType":"0", "Cookie":str(COOKIE), "OrderSide":str(order_side), "OrderType":str(order_type), "Price":str(price), "Qty":str(qty), "StockCode":stock_code}#EnvType:1,港股仿真交易,0,港股真实交易   
     order_success = True   
     #import time
     #time.sleep(1.5)         #按照要求，30s内不能交易超过20次.
     analyzed_rsps_arr = send_req_and_get_rsp(lstbox, conn, 6003, req_param, 1)
     #analyzed_rsps_arr = send_req_and_get_rsp(conn, 7003, req_param, 1)  # 测试用：Market:美股，StockCode:股票代码
     lstbox.insert(END,"已经下单成功：价格：%s,数量：%s，等待成交..." % (str(float(price)/1000), str(qty)))
-    print "已经下单成功：价格：%s,数量：%s，等待成交..." % (str(float(price)/1000), str(qty))
+    #print "已经下单成功：价格：%s,数量：%s，等待成交..." % (str(float(price)/1000), str(qty))
     if deal_status_ok(lstbox, conn,COOKIE,stock_code):
         COOKIE += 1
         return order_success
 
 #{"Protocol":"7008","ReqParam":{"Cookie":"123123","EnvType":"0"},"Version":"1"}
 def deal_status_ok(lstbox, conn,Cookie,stock_code):
-    req_param = {"Cookie":str(Cookie),"EnvType":"1"}#1,港股仿真交易
+    req_param = {"Cookie":str(Cookie),"EnvType":"0"} #EnvType：1,港股仿真交易,0,港股真实交易
     #analyzed_rsps_arr = send_req_and_get_rsp(conn, 7008, req_param, 1) #测试用：Market:美股，StockCode:股票代码
     #order_array = analyzed_rsps_arr["USOrderArr"]#测试用：Market:美股，StockCode:股票代码
     while True:
@@ -90,14 +91,14 @@ class FT:
     def __del__(self):
         self._conn.close()
         self.lstbox.insert(END, "连接FTNN结束.")
-        print "连接FTNN结束."
+        #print "连接FTNN结束."
 
     def get_cur_price(self):
         req_param = {'Market':'1','StockCode':'%s' % str(self._code)}  #Market:港股，StockCode:股票代码
         # req_param = {'Market':'2','StockCode':'%s' % str(self._code)}    # 测试用：Market:美股，StockCode:股票代码
         data = send_req_and_get_rsp(self.lstbox, self._conn, 1001, req_param, 1)    #获取当前股票基础信息
-        real_price = int(data["Cur"])
-        return real_price
+        real_price,Time = int(data["Cur"]),data["Time"]
+        return real_price,Time
 
     def get_stock_gear(self, get_gear_num):
         req_param = {"Market":"1",'StockCode':'%s' % str(self._code),"GetGearNum":str(get_gear_num)}
@@ -106,23 +107,23 @@ class FT:
         try:
             dic_gear_info_lst = analyzed_rsps["GearArr"]
             if dic_gear_info_lst is None:
-                print "获取买卖档口错误."
+                #print "获取买卖档口错误."
                 self.lstbox.insert(END, "获取买卖档口错误.")
                 return
         except TypeError,e:
-            print "股票输入错误：" + '\n',e
+            #print "股票输入错误：",e
             self.lstbox.insert(END, "股票输入错误：%s" % e)
             sys.exit()
         return dic_gear_info_lst
 
     def get_account_info(self):
-        req_param = {"Cookie":"123456","EnvType":"1"} #1,港股仿真交易
+        req_param = {"Cookie":"123456","EnvType":"0"} #EnvType：1,港股仿真交易 0：港股真实交易
         account_info_rsp = send_req_and_get_rsp(self.lstbox, self._conn, 6007, req_param, 1)
         # account_info_rsp = send_req_and_get_rsp(self._conn, 7007, req_param, 1)  # 测试用：Market:美股，StockCode:股票代码
         return account_info_rsp["Power"], account_info_rsp["ZCJZ"]
 
     def check_on_hold(self):
-        req_param = {"Cookie":"123457","EnvType":"1"} #1,港股仿真交易
+        req_param = {"Cookie":"123457","EnvType":"0"} #EnvType：1,港股仿真交易 0：港股真实交易
         on_hold_dict = send_req_and_get_rsp(self.lstbox, self._conn, 6009, req_param, 1)
         #on_hold_dict = send_req_and_get_rsp(self._conn, 7009, req_param, 1)        # 测试用：Market:美股，StockCode:股票代码
         on_holded_stock_lst = on_hold_dict["HKPositionArr"]
@@ -143,17 +144,19 @@ class DEAL(threading.Thread):
         self.lowline = float(entry5.get())
         self.controlline = float(entry6.get())
         
-        #print '###',self.stockcode,'+',self.meishou,'+',self.fst_price,'+',self.upline,'+',self.lowline,'+',self.controlline,'###'
+        #print '###','+',self.stockcode,'+',self.meishou,'+',self.fst_price,'+',self.upline,'+',self.lowline,'+',self.controlline,'+','###'
         #print '###',type(self.stockcode), type(self.meishou), type(self.fst_price), type(self.upline), type(self.lowline), type(self.controlline),'###'
-        
+        #listbox.insert(END, '###','+',self.stockcode,'+',self.meishou,'+',self.fst_price,'+',self.upline,'+',self.lowline,'+',self.controlline,'+','###')
         try:
             self.ft = FT(self.stockcode,listbox)
         except Exception,e:
-            print "连接服务器错误, 检查牛牛是否开启 %s" % e
-            listbox.delete(0, END)
+            #print "连接服务器错误, 检查牛牛是否开启 %s" % e
+            #listbox.delete(0, END)
             listbox.insert(END, "连接服务器错误, 检查牛牛是否开启 %s" % e)
             return
-        
+    def input_valid(self):
+        return  self.upline> self.lowline>  self.controlline
+    
     # 检查持仓列表
     def i_have_hold(self):
         hold_lsts = self.ft.check_on_hold()
@@ -163,6 +166,7 @@ class DEAL(threading.Thread):
         i_have = self.i_have_hold()
         listbox.delete(0, END)
         listbox.insert(END, "***************************天下武功，唯快不破***************************")
+        listbox.insert(END, "当前输入内容为："+'#'.join((self.stockcode,self.meishou,self.fst_price,str(self.upline),str(self.lowline),str(self.controlline))))
         hold_stock_lst = []
         if i_have:
             hold_stock_lst = [hold_lst["StockCode"] for hold_lst in i_have]  # 已经持有的股票代码，列表
@@ -170,14 +174,14 @@ class DEAL(threading.Thread):
                 hold_stock_num = [hold_lst["CanSellQty"] for hold_lst in i_have if hold_lst["StockCode"]==str(self.stockcode)]
                 if int(hold_stock_num[0])!=0:
                     listbox.insert(END, '该股票已在持仓列表中，开始高频交易...')
-                    print "该股票已在持仓列表中，开始高频交易..."
+                    #print "该股票已在持仓列表中，开始高频交易..."
                     for hold_lst in i_have:
                         if hold_lst.get("StockCode") == str(self.stockcode) and hold_lst.get("CostPriceValid") == "1":
                             buy_stock_at_price = float(hold_lst.get("CostPrice"))
                             buy_stock_at_qty = int(hold_lst.get("Qty"))
                             self.run_multy_deal(buy_stock_at_price, 0, buy_stock_at_qty)                 # 开始自动交易
         # 没有持有任何股票,或者此股票不在已持股票行列
-        print "我还没持有该股票(%s)，开始购买..." % self.stockcode
+        #print "我还没持有该股票(%s)，开始购买..." % self.stockcode
         listbox.insert(END, "我还没持有该股票(%s)，开始购买..." % self.stockcode)
         (mairujia, mairushuliang) = self.fst_time_auto_buy()                                  # 购买股票
         if mairujia==False or mairushuliang==False:
@@ -204,7 +208,7 @@ class DEAL(threading.Thread):
                 buy_num = buy_num * int(self.meishou) #购买的数量，美股self.meishou=1
                 if buy_num < 1:
                     listbox.insert(END, "资产净值(%.3f)，但购买力(%.3f)不够买一手！" % (float(zcjz_str) / 1000, float(power_str) / 1000))
-                    print "资产净值(%.3f)，但购买力(%.3f)不够买一手！" % (float(zcjz_str) / 1000, float(power_str) / 1000)
+                    #print "资产净值(%.3f)，但购买力(%.3f)不够买一手！" % (float(zcjz_str) / 1000, float(power_str) / 1000)
                     return (False,False)
 
                 '''第1次购买时，以现价/卖一价/设定价的最低值为交易价格，待商榷'''
@@ -214,19 +218,20 @@ class DEAL(threading.Thread):
                 #if place_order(self.ft._conn, 0, 2, fst_bu_prc, buy_num, self.stockcode):
                 if place_order(listbox, self.ft._conn, 0, 0, fst_bu_prc, buy_num, self.stockcode):
                     listbox.insert(END,"第1次交易%s成功，以价格%0.3f买入%d手." % (self.stockcode, (float(fst_bu_prc))/1000, int(buy_num)))
-                    print "第1次交易%s成功，以价格%0.3f买入%d手." % (self.stockcode, (float(fst_bu_prc))/1000, int(buy_num))
+                    #print "第1次交易%s成功，以价格%0.3f买入%d手." % (self.stockcode, (float(fst_bu_prc))/1000, int(buy_num))
                 else:
                     listbox.insert(END,"第1次购买失败，退出程序.")
-                    print "第1次购买失败，退出程序."
+                    #print "第1次购买失败，退出程序."
                                   
                 fst_buy_fail=False
         return float(fst_bu_prc), buy_num   # 买入成功、买入价、买入数量
 
     def run_multy_deal(self, lst_time_exchange_price, lst_time_exchange_side, lst_time_exchange_num, i=2):
         listbox.insert(END,"等待下一次交易中...")
-        print "等待下一次交易中..."
+        #print "等待下一次交易中..."
         while True:
-            cur_p = self.ft.get_cur_price()
+            cur_p,tm = self.ft.get_cur_price()[0:]
+            Label9_display.set(tm)
             # 买入后涨幅在2%-8%的时候，卖出，并记录本次交易价格
             if self.controlline <= (float(cur_p) - float(lst_time_exchange_price))/float(lst_time_exchange_price) *100 < self.lowline \
                     and lst_time_exchange_side == 0:
@@ -239,10 +244,10 @@ class DEAL(threading.Thread):
 #                     print "查看摆盘数据1..."
 #                     if float(buy_price_one_in_if) >= float(self.ft.get_cur_price()):
                 listbox.insert(END,"价格上升，大于控制线，卖出股票...")
-                print "价格上升，大于控制线，卖出股票..."
+                #print "价格上升，大于控制线，卖出股票..."
                 place_order(listbox,self.ft._conn, lst_time_exchange_side, 0, cur_p, lst_time_exchange_num, self.stockcode)
                 listbox.insert(END,"第%s次交易成功，以价格%.3f 卖出%d手." % (i, (float(cur_p)/1000), lst_time_exchange_num))
-                print "第%s次交易成功，以价格%.3f 卖出%d手." % (i, (float(cur_p)/1000), lst_time_exchange_num)
+                #print "第%s次交易成功，以价格%.3f 卖出%d手." % (i, (float(cur_p)/1000), lst_time_exchange_num)
                 lst_time_exchange_price = cur_p
                 i += 1
                 continue
@@ -259,10 +264,10 @@ class DEAL(threading.Thread):
 #                     print "查看摆盘数据2..."
 #                     if float(sell_price_in_if) <= float(self.ft.get_cur_price()):
                 listbox.insert(END,"价格下降，大于控制线，准备买入股票...")
-                print "价格下降，大于控制线，准备买入股票..."
+                #print "价格下降，大于控制线，准备买入股票..."
                 place_order(listbox, self.ft._conn, lst_time_exchange_side, 0, cur_p, lst_time_exchange_num, self.stockcode)
                 listbox.insert(END,"第%s次交易%s成功，以买一价格%0.3f买入%d手." % (i, self.stockcode, (float(cur_p))/1000, lst_time_exchange_num))
-                print "第%s次交易%s成功，以买一价格%0.3f买入%d手." % (i, self.stockcode, (float(cur_p))/1000, lst_time_exchange_num)
+                #print "第%s次交易%s成功，以买一价格%0.3f买入%d手." % (i, self.stockcode, (float(cur_p))/1000, lst_time_exchange_num)
                 lst_time_exchange_price = cur_p
                 i += 1
                 continue
@@ -277,10 +282,10 @@ class DEAL(threading.Thread):
 #                     buy_price_one_in_8_15 = gear_info["BuyPrice"]
                 lst_time_exchange_side = lst_time_exchange_side^1
                 listbox.insert(END,"价格波动过大，准备清仓走人...")
-                print  "价格波动过大，准备清仓走人..."
+                #print  "价格波动过大，准备清仓走人..."
                 place_order(listbox, self.ft._conn, lst_time_exchange_side, 0, cur_p, lst_time_exchange_num, self.stockcode)
                 listbox.insert(END,"第%s次交易成功，以买一价格%0.3f卖出%d手,退出程序！" % (i, (float(cur_p))/1000, lst_time_exchange_num))
-                print "第%s次交易成功，以买一价格%0.3f卖出%d手,退出程序！" % (i, (float(cur_p))/1000, lst_time_exchange_num)
+                #print "第%s次交易成功，以买一价格%0.3f卖出%d手,退出程序！" % (i, (float(cur_p))/1000, lst_time_exchange_num)
                 
                 return
 
@@ -307,9 +312,10 @@ if __name__ == "__main__":
 #     DEAL_obj = DEAL(stock, lowlmt, uplmt, controlline, meishou, fst_price)
 #     DEAL_obj.trade()
     root = Tk()
-    root.title('自动化交易助手')
+    root.title('自动化交易助手V1.0.0')
     root.geometry("745x500+200+100")
-    root.iconbitmap(r'E:\BBYY\assassin.ico')
+    root.iconbitmap(r'.\assassin.ico')
+    root.resizable(False, False)
     root.minsize(400,300)
 
     gpdm = Label(root, text ='股票代码:',font=("黑体", 9, "bold"))
@@ -358,7 +364,7 @@ if __name__ == "__main__":
     
     #entry6.bind("<KeyRelease-Return>", runThread)    #bind <Enter>
 
-    button = Button(root, text="开始交易", width=10, font=("黑体", 9, "bold"),command=runThread)
+    button = Button(root, text="开始交易", width=11, font=("黑体", 9, "bold"),command=runThread)
     button.grid(row=0, column=15,sticky=E,columnspan=2)
 
     #button.bind('<Button-1>', runThread)    #bind left mouseclick
@@ -380,8 +386,13 @@ if __name__ == "__main__":
     Label8 = Label(root, width=15, relief = 'sunken', borderwidth = 3, anchor = SE)
     Label8.grid(row=2, column=9, columnspan=3)
     Label8['textvariable'] = Label8_display
-    
-    button = Button(root, text="计算价格",height=5, width=10,font=("黑体", 9, "bold"),command=calc)
-    button.grid(row=1, column=15,sticky=W,columnspan=5, rowspan = 2)
-    root.mainloop()
 
+    global display2
+    Label9_display = StringVar()
+    Label9 = Label(root, width=11, relief = 'sunken', borderwidth = 3, anchor = SE)
+    Label9.grid(row=1, column=15, columnspan=5)
+    Label9['textvariable'] = Label9_display
+    
+    button = Button(root, text="计算价格", width=11,font=("黑体", 9, "bold"),command=calc)
+    button.grid(row=2, column=15,sticky=W,columnspan=5, rowspan = 1)
+    root.mainloop()
