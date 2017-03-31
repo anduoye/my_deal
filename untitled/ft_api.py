@@ -27,7 +27,7 @@ def send_req_and_get_rsp(lstbox, conn, protocol_code, req_param, protocol_versio
         req_str = json.dumps(req) + "\r\n"
         conn.send(req_str)
     except socket.timeout:
-        print "time out"
+        print ("time out")
         return
     rsp_str = ""
     while True:
@@ -36,7 +36,7 @@ def send_req_and_get_rsp(lstbox, conn, protocol_code, req_param, protocol_versio
         try:
             rsp_str.index('\n')
             break    
-        except Exception,e:
+        except Exception:
             pass
     res_dic = json_analyze_rsps(rsp_str)        #回包josn解析
     
@@ -110,7 +110,7 @@ class FT:
                 #print "获取买卖档口错误."
                 self.lstbox.insert(END, "获取买卖档口错误.")
                 return
-        except TypeError,e:
+        except TypeError:
             #print "股票输入错误：",e
             self.lstbox.insert(END, "股票输入错误：%s" % e)
             sys.exit()
@@ -149,7 +149,7 @@ class DEAL(threading.Thread):
         #listbox.insert(END, '###','+',self.stockcode,'+',self.meishou,'+',self.fst_price,'+',self.upline,'+',self.lowline,'+',self.controlline,'+','###')
         try:
             self.ft = FT(self.stockcode,listbox)
-        except Exception,e:
+        except Exception:
             #print "连接服务器错误, 检查牛牛是否开启 %s" % e
             #listbox.delete(0, END)
             listbox.insert(END, "连接服务器错误, 检查牛牛是否开启 %s" % e)

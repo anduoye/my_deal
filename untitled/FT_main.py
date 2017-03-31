@@ -16,11 +16,11 @@ class FT:
         try:
             self._conn.connect(("localhost", 11111))
         except Exception as e:
-            print "连接FTNN错误，退出程序！!", e
+            print ("连接FTNN错误，退出程序！!", e)
 
     def __del__(self):
         self._conn.close()
-        print "连接FTNN结束."
+        print ("连接FTNN结束.")
 
     def get_cur_price(self):
         # req_param = {'Market':'1','StockCode':'%s' % str(self._code)}  #Market:港股，StockCode:股票代码
@@ -36,10 +36,10 @@ class FT:
         try:
             dic_gear_info_lst = analyzed_rsps["GearArr"]
             if dic_gear_info_lst is None:
-                print "获取买卖档口错误."
+                print ("获取买卖档口错误.")
                 return
-        except TypeError,e:
-            print "股票输入错误：" + '\n',e
+        except TypeError:
+            print ("股票输入错误：" + '\n',e)
             sys.exit()
             
         # buy_price_one  = dic_gear_info_lst[0]["BuyPrice"]   # 暂且认为当前市场上出价的第一把交易能满足我的需求
@@ -97,7 +97,7 @@ class DEAL():
         if i_have:
             hold_stock_lst = [hold_lst["StockCode"] for hold_lst in i_have]  # 已经持有的股票代码，列表
             if str(self.stockcode) in hold_stock_lst:
-                print "该股票已在持仓列表中，开始高频交易。。。"
+                print ("该股票已在持仓列表中，开始高频交易。。。")
                 for hold_lst in i_have:
                     if hold_lst.get("StockCode") == str(self.stockcode) and hold_lst.get("CostPriceValid") == "1":
                         buy_stock_at_price = float(hold_lst.get("CostPrice"))
@@ -105,7 +105,7 @@ class DEAL():
                         self.run(buy_stock_at_price, 0, buy_stock_at_qty)                 # 开始自动交易
 
         else:                                                                             # 没有持有任何股票,或者此股票不在已持股票行列
-            print "我还没有持有该股票：%s，开始购买。.." % self.stockcode
+            print ("我还没有持有该股票：%s，开始购买。.." % self.stockcode)
             (mairujia, mairushuliang) = self.fst_time_auto_buy()[1:]                      # 购买股票
             self.run(mairujia, 0, mairushuliang)                                          # 开始自动交易
 
@@ -120,7 +120,7 @@ class DEAL():
         buy_num = 0
 
         power_str, zcjz_str = self.ft.get_account_info()
-        #print "pwer %s, zcjz:%s" % (power_str, zcjz_str)
+        #print ("pwer %s, zcjz:%s" % (power_str, zcjz_str))
         gear_info_lst = self.ft.get_stock_gear(1)           #真实环境
 
         while fst_buy_fail:
@@ -130,7 +130,7 @@ class DEAL():
 
                 buy_num = int(float(power_str)/(int(self.meishou) * int(sell_price_one)))
                 if buy_num < 1:
-                    print "当前资产净值(%.3f)太少，不够买一手！退出程序。" % (float(zcjz_str) / 1000)
+                    print ("当前资产净值(%.3f)太少，不够买一手！退出程序。" % (float(zcjz_str) / 1000))
                     sys.exit()
 
                 '''第1次购买时，以现价/卖一价/设定价的最低值为交易价格，待商榷'''
@@ -139,9 +139,9 @@ class DEAL():
                 # def place_order(conn, order_side, order_type, price, qty, stock_code):
                 # 美股中，参数三：“2”为普通下单
                 if place_order(self.ft._conn, 0, 2, fst_bu_prc, buy_num, self.stockcode):
-                    print "第1次交易%s，以卖一价格%0.3f买入%d手" % (self.stockcode, (float(fst_bu_prc))/1000, int(buy_num))
+                    print ("第1次交易%s，以卖一价格%0.3f买入%d手" % (self.stockcode, (float(fst_bu_prc))/1000, int(buy_num)))
                 else:
-                    print "第1次购买失败，退出程序。"
+                    print ("第1次购买失败，退出程序。")
                     sys.exit()
                 
                 fst_buy_fail = False
@@ -154,7 +154,7 @@ class DEAL():
         #lst_time_exchange_price = self.fst_time_auto_buy()[1]
         #lst_time_exchange_side = 0
         #lst_time_exchange_num = self.fst_time_auto_buy()[3]
-        print "start to run.."
+        print ("start to run..")
         #if self.fst_time_auto_buy()[0]:
         while True:
 
@@ -170,7 +170,7 @@ class DEAL():
                     # 0 --买入， 1--卖出
                     if float(buy_price_one_in_if) >= float(buy_price_one_in_if):
                         place_order(self.ft._conn, lst_time_exchange_side, 0, buy_price_one_in_if, lst_time_exchange_num, self.stockcode)
-                        print "第%s次交易，以买一价格%.3f卖出%d手。" % (i, ((float(buy_price_one_in_if))/1000), lst_time_exchange_num)
+                        print ("第%s次交易，以买一价格%.3f卖出%d手。" % (i, ((float(buy_price_one_in_if))/1000)), lst_time_exchange_num)
                         lst_time_exchange_price = buy_price_one_in_if
                         i += 1
                 continue
@@ -187,7 +187,7 @@ class DEAL():
                     # 0 --买入， 1--卖出
                     if float(sell_price_in_if) <= float(self.ft.get_cur_price()):
                         place_order(self.ft._conn, lst_time_exchange_side, 0, sell_price_in_if, lst_time_exchange_num, self.stockcode)
-                        print "第%s次交易%s，以买一价格%0.3f买入%d手。" % (i, self.stockcode, (float(sell_price_in_if))/1000, lst_time_exchange_num)
+                        print ("第%s次交易%s，以买一价格%0.3f买入%d手。" % (i, self.stockcode, (float)(sell_price_in_if))/1000, lst_time_exchange_num)
                         lst_time_exchange_price = sell_price_in_if
                         i += 1
                 continue
@@ -204,23 +204,23 @@ class DEAL():
 
                     # 0 --买入， 1--卖出
                     place_order(self.ft._conn, lst_time_exchange_side, 0, buy_price_one_in_8_15, lst_time_exchange_num, self.stockcode)
-                    print "第%s次交易，以买一价格%0.3f卖出%d手,退出程序！" % (i, (float(buy_price_one_in_8_15))/1000, lst_time_exchange_num)
+                    print ("第%s次交易，以买一价格%0.3f卖出%d手,退出程序！" % (i, (float(buy_price_one_in_8_15))/1000, lst_time_exchange_num))
                     sys.exit()
 #         else:
 #             print "首次买入没有成功，退出。"
 #             return
 
 if __name__ == "__main__":
-    stock = raw_input("股票代码(必须)：")
-    meishou = raw_input("每手(必须)：")
-    fst_price = raw_input("首次购买价(必须)：")
-    num_shang = raw_input("上线(非必须)：")
-    num_xia = raw_input("下线(非必须)：")
-    controlline_num = raw_input("控制线(非必须)：")
+    stock = input("股票代码(必须)：")
+    meishou = input("每手(必须)：")
+    fst_price = input("首次购买价(必须)：")
+    num_shang = input("上线(非必须)：")
+    num_xia = input("下线(非必须)：")
+    controlline_num = input("控制线(非必须)：")
     uplmt = 15 if num_shang == "" else num_shang
     lowlmt = 8 if num_xia == "" else num_xia
     controlline = 2 if controlline_num == "" else controlline_num
-    print "股票代码：%s" % stock, "每手：%s" % meishou, "首次购买价：%s" %  fst_price, "上线：%s" % uplmt +'%', "下线：%s" %  lowlmt + '%'
+    print ("股票代码：%s" % stock, "每手：%s" % meishou, "首次购买价：%s" %  fst_price, "上线：%s" % uplmt +'%'), "下线：%s" %  lowlmt + '%'
 
     #connection = FT(stock)
     # print connection.get_cur_price()

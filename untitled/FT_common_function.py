@@ -22,12 +22,12 @@ def send_req_and_get_rsp(conn, protocol_code, req_param, protocol_version): #发
     try:
         req = {"Protocol":str(protocol_code), "ReqParam":req_param, "Version":str(protocol_version)}
         req_str = json.dumps(req) + "\r\n"
-        print "req_str:",req_str
+        print ("req_str:",req_str)
         conn.send(req_str)
     except socket.timeout:
     #except Exception as e:
         #print e
-        print "time out"
+        print ("time out")
         return
     buf_size = 50       #收包
     rsp_str = ""
@@ -42,7 +42,7 @@ def send_req_and_get_rsp(conn, protocol_code, req_param, protocol_version): #发
         if res_dic[0]["RetData"] is not None:
             return res_dic[0]["RetData"]
     else:
-        print "获取服务器响应错误。"
+        print ("获取服务器响应错误。")
         sys.exit()
 
 
@@ -62,7 +62,7 @@ def place_order(conn, order_side, order_type, price, qty, stock_code):
     
     #analyzed_rsps_arr = send_req_and_get_rsp(self._conn, 6003, req_param, 1)
     analyzed_rsps_arr = send_req_and_get_rsp(conn, 7003, req_param, 1)
-    print "已经下单成功：价格：%s,数量：%s" % (str(price),str(qty))
+    print ("已经下单成功：价格：%s,数量：%s" % (str(price),str(qty)))
     
 #     if analyzed_rsps_arr is not None:
 #         for analyzed_rsps in analyzed_rsps_arr:
@@ -72,7 +72,7 @@ def place_order(conn, order_side, order_type, price, qty, stock_code):
 #                 return
     while order_success:                                  #轮询检查当前cookie的交易状态，直到查询到”全部成交“
         if deal_status_ok(conn,COOKIE):
-            print "交易成功。"
+            print ("交易成功。")
             return order_success
         else:
             continue
@@ -84,7 +84,7 @@ def deal_status_ok(conn,Cookie):
     order_array = analyzed_rsps_arr["USOrderArr"]
     if order_array:
         '''现在要求每次只交易一支股票，'''
-        print "等待成交中。。。"
+        print ("等待成交中。。。")
         return 3 == int(order_array[0]["Status"])
     
         
