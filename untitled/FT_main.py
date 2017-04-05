@@ -64,10 +64,10 @@ class FT:
 
     def check_on_hold(self):
         req_param = {"Cookie":"123457","EnvType":"0"}
-        #on_hold_dict = send_req_and_get_rsp(self._conn, 6009, req_param, 1)
-        on_hold_dict = send_req_and_get_rsp(self._conn, 7009, req_param, 1)  # 测试用：Market:美股，StockCode:股票代码
-        #on_holded_stock_lst = on_hold_dict["HKPositionArr"]
-        on_holded_stock_lst = on_hold_dict["USPositionArr"]  # 测试用：Market:美股，StockCode:股票代码
+        on_hold_dict = send_req_and_get_rsp(self._conn, 6009, req_param, 1)
+        # on_hold_dict = send_req_and_get_rsp(self._conn, 7009, req_param, 1)  # 测试用：Market:美股，StockCode:股票代码
+        on_holded_stock_lst = on_hold_dict["HKPositionArr"]
+        # on_holded_stock_lst = on_hold_dict["USPositionArr"]  # 测试用：Market:美股，StockCode:股票代码
 
         return on_holded_stock_lst
 
@@ -211,16 +211,25 @@ class DEAL():
 #             return
 
 if __name__ == "__main__":
-    stock = input("股票代码(必须)：")
-    meishou = input("每手(必须)：")
-    fst_price = input("首次购买价(必须)：")
-    num_shang = input("上线(非必须)：")
-    num_xia = input("下线(非必须)：")
-    controlline_num = input("控制线(非必须)：")
+    # stock = input("股票代码(必须)：")
+    # meishou = input("每手(必须)：")
+    # fst_price = input("首次购买价(必须)：")
+    # num_shang = input("上线(非必须)：")
+    # num_xia = input("下线(非必须)：")
+    # controlline_num = input("控制线(非必须)：")
+
+    stock = '00700' 
+    meishou = 100
+    fst_price = 300
+    num_shang = ""
+    num_xia = ""
+    controlline_num = ""
+
+    controlline_num = 100
     uplmt = 15 if num_shang == "" else num_shang
     lowlmt = 8 if num_xia == "" else num_xia
     controlline = 2 if controlline_num == "" else controlline_num
-    print ("股票代码：%s" % stock, "每手：%s" % meishou, "首次购买价：%s" %  fst_price, "上线：%s" % uplmt +'%'), "下线：%s" %  lowlmt + '%'
+    print ("股票代码：%s" % stock, "每手：%s" % meishou, "首次购买价：%s" %  fst_price, "上线：%s" % uplmt +'%', "下线：%s" %  lowlmt + '%')
 
     #connection = FT(stock)
     # print connection.get_cur_price()
