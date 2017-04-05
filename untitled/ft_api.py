@@ -8,6 +8,7 @@ import socket
 import json
 import sys
 import threading
+from openft.open_quant_context import *
 
 COOKIE = 123456
 
@@ -110,7 +111,7 @@ class FT:
                 #print "获取买卖档口错误."
                 self.lstbox.insert(END, "获取买卖档口错误.")
                 return
-        except TypeError:
+        except TypeError as e:
             #print "股票输入错误：",e
             self.lstbox.insert(END, "股票输入错误：%s" % e)
             sys.exit()
@@ -137,19 +138,19 @@ class FT:
 class DEAL(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
-        self.stockcode = entry1.get()
-        self.meishou = entry2.get()
-        self.fst_price = entry3.get()
-        self.upline = float(entry4.get())
-        self.lowline = float(entry5.get())
-        self.controlline = float(entry6.get())
+        self.stockcode = stockCode.get()
+        self.meishou = meishouCount.get()
+        self.fst_price = price.get()
+        self.upline = float(upLimit.get())
+        self.lowline = float(downLimit.get())
+        self.controlline = float(controlLimit.get())
         
         #print '###','+',self.stockcode,'+',self.meishou,'+',self.fst_price,'+',self.upline,'+',self.lowline,'+',self.controlline,'+','###'
         #print '###',type(self.stockcode), type(self.meishou), type(self.fst_price), type(self.upline), type(self.lowline), type(self.controlline),'###'
         #listbox.insert(END, '###','+',self.stockcode,'+',self.meishou,'+',self.fst_price,'+',self.upline,'+',self.lowline,'+',self.controlline,'+','###')
         try:
             self.ft = FT(self.stockcode,listbox)
-        except Exception:
+        except Exception as e:
             #print "连接服务器错误, 检查牛牛是否开启 %s" % e
             #listbox.delete(0, END)
             listbox.insert(END, "连接服务器错误, 检查牛牛是否开启 %s" % e)
@@ -295,7 +296,7 @@ def runThread():
 
 def calc():
     try:
-        contrNUM = float(entry7.get())*(1+float(entry6.get())/100)
+        contrNUM = float(tradePrice.get())*(1+float(controlLimit.get())/100)
         Label8_display.set(contrNUM)
     except Exception as e:
         Label8_display.set("计算价格出现错误")
@@ -320,26 +321,28 @@ if __name__ == "__main__":
 
     gpdm = Label(root, text ='股票代码:',font=("黑体", 9, "bold"))
     gpdm.grid(row = 0, column = 0,sticky=E,pady=15)
-    v=StringVar()
-    entry1 = Entry(root, width=8,textvariable=v)
-    entry1.grid(row=0, column=1, sticky=W)
-    entry1.focus_set()
+    v=StringVar(value='HK.00700')
+    stockCode = Entry(root, width=8,textvariable=v)
+    stockCode.grid(row=0, column=1, sticky=W)
+    stockCode.focus_set()
     
     ms = Label(root, text = '每手:',font=("黑体", 9, "bold"))
     ms.grid(row = 0, column = 2,sticky=E)
-    entry2 = Entry(root, width=8)
-    entry2.grid(row=0, column=3, sticky=W)
+    v=StringVar(value='100')
+    meishouCount = Entry(root, width=8,textvariable=v)
+    meishouCount.grid(row=0, column=3, sticky=W)
     
     gmj = Label(root, text = '购买价:',font=("黑体", 9, "bold"))
     gmj.grid(row =0, column = 4,sticky=E)
-    entry3 = Entry(root, width=8)
-    entry3.grid(row=0, column=5,sticky=W)
+    v=StringVar(value='300')
+    price = Entry(root, width=8,textvariable=v)
+    price.grid(row=0, column=5,sticky=W)
     
     shx = Label(root, text = '上限:',font=("黑体", 9, "bold"))
     shx.grid(row = 0, column = 6,sticky=E)
     v4=StringVar()
-    entry4 = Entry(root, width=5,textvariable=v4)
-    entry4.grid(row=0, column=7, sticky=W)
+    upLimit = Entry(root, width=5,textvariable=v4)
+    upLimit.grid(row=0, column=7, sticky=W)
     v4.set("15")
     bfh1 = Label(root, text = '%')
     bfh1.grid(row = 0, column = 7,sticky=E)
@@ -347,8 +350,8 @@ if __name__ == "__main__":
     xx = Label(root, text = '下限：',font=("黑体", 9, "bold"))
     xx.grid(row =0, column = 8,sticky=E)
     v5=StringVar()
-    entry5 = Entry(root, width=5,textvariable=v5)
-    entry5.grid(row=0, column=9, sticky=W)
+    downLimit = Entry(root, width=5,textvariable=v5)
+    downLimit.grid(row=0, column=9, sticky=W)
     v5.set("8")
     bfh2 = Label(root, text = '%')
     bfh2.grid(row = 0, column = 9,sticky=E)
@@ -356,13 +359,13 @@ if __name__ == "__main__":
     kzx = Label(root, text = '控制限：',font=("黑体", 9, "bold"))
     kzx.grid(row =0, column = 10,sticky=E)
     v6=StringVar()
-    entry6 = Entry(root, width=5,textvariable=v6)
-    entry6.grid(row=0, column=11, sticky=W)
+    controlLimit = Entry(root, width=5,textvariable=v6)
+    controlLimit.grid(row=0, column=11, sticky=W)
     v6.set("2")
     bfh3 = Label(root, text = '%')
     bfh3.grid(row =0, column = 11,sticky=E)
     
-    #entry6.bind("<KeyRelease-Return>", runThread)    #bind <Enter>
+    #controlLimit.bind("<KeyRelease-Return>", runThread)    #bind <Enter>
 
     button = Button(root, text="开始交易", width=11, font=("黑体", 9, "bold"),command=runThread)
     button.grid(row=0, column=15,sticky=E,columnspan=2)
@@ -377,8 +380,8 @@ if __name__ == "__main__":
     scrollbar.config(command=listbox.yview)
     
     Label(root,text="交易价格:", font=("黑体", 9, "bold")).grid(row = 1, column = 8)
-    entry7 = Entry(root, width=15)
-    entry7.grid(row=1, column=9, columnspan=3)
+    tradePrice = Entry(root, width=15)
+    tradePrice.grid(row=1, column=9, columnspan=3)
     Label(root,text="预期价格:", font=("黑体", 9, "bold")).grid(row = 2, column = 8)
     
     global display
