@@ -12,42 +12,9 @@ from openft.open_quant_context import *
 
 COOKIE = 123456
 
-def json_analyze_rsps(rsp_str):
-    ret_data_arr = []
-    rsp_ar = rsp_str.split("\r\n")
-    for rsp in rsp_ar:
-        if len(rsp) <= 0 :
-            continue
-        rsp_after_json_analyze = json.loads(rsp)
-        ret_data_arr.append(rsp_after_json_analyze)
-    return ret_data_arr
-
 def send_req_and_get_rsp(lstbox, conn, protocol_code, req_param, protocol_version):
-    try:
-        req = {"Protocol":str(protocol_code), "ReqParam":req_param, "Version":str(protocol_version)}
-        req_str = json.dumps(req) + "\r\n"
-        conn.send(req_str)
-    except socket.timeout:
-        print ("time out")
-        return
-    rsp_str = ""
-    while True:
-        buf = conn.recv(1024)
-        rsp_str += buf
-        try:
-            rsp_str.index('\n')
-            break    
-        except Exception:
-            pass
-    res_dic = json_analyze_rsps(rsp_str)        #回包josn解析
-    
-    if int(res_dic[0]["ErrCode"]) == 0:
-        if res_dic[0]["RetData"] is not None:
-            return res_dic[0]["RetData"]
-    else:
-        lstbox.insert(END,'交易出现错误，原因是：',res_dic[0]['ErrDesc'])
-        return
-        #print '交易出现错误，原因是：',res_dic[0]['ErrDesc']
+    pass
+
 
 # OrderSide: 0---买入, 1---卖出
 # order_type: 增强限价单(普通交易)
@@ -55,29 +22,11 @@ def send_req_and_get_rsp(lstbox, conn, protocol_code, req_param, protocol_versio
 # qty:交易数量
 # stock_code:股票代码
 def place_order(lstbox, conn, order_side, order_type, price, qty, stock_code):
-    global COOKIE
-    req_param = {"EnvType":"0", "Cookie":str(COOKIE), "OrderSide":str(order_side), "OrderType":str(order_type), "Price":str(price), "Qty":str(qty), "StockCode":stock_code}#EnvType:1,港股仿真交易,0,港股真实交易   
-    order_success = True   
-    #import time
-    #time.sleep(1.5)         #按照要求，30s内不能交易超过20次.
-    analyzed_rsps_arr = send_req_and_get_rsp(lstbox, conn, 6003, req_param, 1)
-    #analyzed_rsps_arr = send_req_and_get_rsp(conn, 7003, req_param, 1)  # 测试用：Market:美股，StockCode:股票代码
-    lstbox.insert(END,"已经下单成功：价格：%s,数量：%s，等待成交..." % (str(float(price)/1000), str(qty)))
-    #print "已经下单成功：价格：%s,数量：%s，等待成交..." % (str(float(price)/1000), str(qty))
-    if deal_status_ok(lstbox, conn,COOKIE,stock_code):
-        COOKIE += 1
-        return order_success
+    pass
 
 #{"Protocol":"7008","ReqParam":{"Cookie":"123123","EnvType":"0"},"Version":"1"}
 def deal_status_ok(lstbox, conn,Cookie,stock_code):
-    req_param = {"Cookie":str(Cookie),"EnvType":"0"} #EnvType：1,港股仿真交易,0,港股真实交易
-    #analyzed_rsps_arr = send_req_and_get_rsp(conn, 7008, req_param, 1) #测试用：Market:美股，StockCode:股票代码
-    #order_array = analyzed_rsps_arr["USOrderArr"]#测试用：Market:美股，StockCode:股票代码
-    while True:
-        analyzed_rsps_arr = send_req_and_get_rsp(lstbox, conn, 6008, req_param, 1)
-        order_array = analyzed_rsps_arr["HKOrderArr"]
-        if '3' == [cur_deal['Status'] for cur_deal in order_array if cur_deal.get('StockCode')==stock_code][-1]:
-            return True
+    pass
         
 class FT:
     def __init__(self, code, lstbox):

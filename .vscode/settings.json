@@ -1,5 +1,10 @@
 // Place your settings in this file to overwrite default and user settings.
 {
     "python.linting.pylintEnabled": false,
-    "python.linting.enabled": false
+    "python.linting.enabled": false,
+    "workbench.experimental.colorCustomizations": {
+       "editorSelection": "#FFFF00",
+       "editorFindMatch": "#FF0000",
+       "editorSelectionHighlight": "#80FF00"
+    }
 }
